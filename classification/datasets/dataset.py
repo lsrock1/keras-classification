@@ -124,86 +124,86 @@ class Dataprocessor:
         return dataset.map(_parse_image_function, num_parallel_calls=AUTOTUNE)
 
 
-def image_resize(image, size):
-    width, height = size
-    # initialize the dimensions of the image to be resized and
-    # grab the image size
-    origin_width = width
-    origin_height = height
-    dim = None
-    (h, w) = image.shape[:2]
+# def image_resize(image, size):
+#     width, height = size
+#     # initialize the dimensions of the image to be resized and
+#     # grab the image size
+#     origin_width = width
+#     origin_height = height
+#     dim = None
+#     (h, w) = image.shape[:2]
 
-    if h > w:
-        width = None
-    else:
-        height = None
+#     if h > w:
+#         width = None
+#     else:
+#         height = None
 
-    # if both the width and height are None, then return the
-    # original image
-    # if width is None and height is None:
-    #     return image
+#     # if both the width and height are None, then return the
+#     # original image
+#     # if width is None and height is None:
+#     #     return image
 
-    # check to see if the width is None
-    if width is None:
-        # calculate the ratio of the height and construct the
-        # dimensions
-        r = height / float(h)
-        dim = (int(w * r), height)
+#     # check to see if the width is None
+#     if width is None:
+#         # calculate the ratio of the height and construct the
+#         # dimensions
+#         r = height / float(h)
+#         dim = (int(w * r), height)
 
-    # otherwise, the height is None
-    else:
-        # calculate the ratio of the width and construct the
-        # dimensions
-        r = width / float(w)
-        dim = (width, int(h * r))
-    # resize the image
-    resized = cv2.resize(image, dim)
+#     # otherwise, the height is None
+#     else:
+#         # calculate the ratio of the width and construct the
+#         # dimensions
+#         r = width / float(w)
+#         dim = (width, int(h * r))
+#     # resize the image
+#     resized = cv2.resize(image, dim)
 
-    # return the resized image
-    resized = pad_size(resized, origin_width, origin_height)
-    return resized
-
-
-def pad_size(image, width, height):
-    (h, w) = image.shape[:2]
-    # print('vertical: ', (height - h), ' horizontal: ', width-w)
-    top, bottom = (height - h) // 2, (height - h) - ((height - h) // 2)
-    left, right = (width - w) // 2, (width - w) - ((width - w) // 2)
-    # print((height - h), ' ', 0, ' ', (width - w), ' ')
-    # print('top: ', top, ' bottom: ', bottom, ' left: ', left, ' right: ', right)
-    image = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=0)
-    return image
+#     # return the resized image
+#     resized = pad_size(resized, origin_width, origin_height)
+#     return resized
 
 
-def decode_img(img, mean, std, size):
-    # print('*'*50)
-    # print(img)
-    # convert the compressed string to a 3D uint8 tensor
-    img = cv2.imread(img[0])#.astype(float)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = image_resize(img, size).astype(float)
-    img = (img - mean) / std
-
-    # print(img.shape)
-    # img = tf.io.read_file(img[0])
-    # img = tf.image.decode_jpeg(img, channels=3)
-    # # Use `convert_image_dtype` to convert to floats in the [0,1] range.
-    # img = tf.image.convert_image_dtype(img, tf.float32).eval()
-    # resize the image to the desired size.
-    # print(img.shape)
-    # print('8'*80)
-    return img
+# def pad_size(image, width, height):
+#     (h, w) = image.shape[:2]
+#     # print('vertical: ', (height - h), ' horizontal: ', width-w)
+#     top, bottom = (height - h) // 2, (height - h) - ((height - h) // 2)
+#     left, right = (width - w) // 2, (width - w) - ((width - w) // 2)
+#     # print((height - h), ' ', 0, ' ', (width - w), ' ')
+#     # print('top: ', top, ' bottom: ', bottom, ' left: ', left, ' right: ', right)
+#     image = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=0)
+#     return image
 
 
-def to_onehot(index):
-    result = np.zeros([len(CLASS_NAMES)])
-    result[index] = 1
-    return result
+# def decode_img(img, mean, std, size):
+#     # print('*'*50)
+#     # print(img)
+#     # convert the compressed string to a 3D uint8 tensor
+#     img = cv2.imread(img[0])#.astype(float)
+#     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+#     img = image_resize(img, size).astype(float)
+#     img = (img - mean) / std
+
+#     # print(img.shape)
+#     # img = tf.io.read_file(img[0])
+#     # img = tf.image.decode_jpeg(img, channels=3)
+#     # # Use `convert_image_dtype` to convert to floats in the [0,1] range.
+#     # img = tf.image.convert_image_dtype(img, tf.float32).eval()
+#     # resize the image to the desired size.
+#     # print(img.shape)
+#     # print('8'*80)
+#     return img
 
 
-def data_ready(path):
-    images = sorted(glob(os.path.join(path, '*/*.jpg')))
-    return np.array(images).reshape(-1, 1), np.array([CLASS_NAMES.index(i.split('/')[-2]) for i in images])
+# def to_onehot(index):
+#     result = np.zeros([len(CLASS_NAMES)])
+#     result[index] = 1
+#     return result
+
+
+# def data_ready(path):
+#     images = sorted(glob(os.path.join(path, '*/*.jpg')))
+#     return np.array(images).reshape(-1, 1), np.array([CLASS_NAMES.index(i.split('/')[-2]) for i in images])
 
 
 # class ValGenerator(Sequence):
@@ -261,7 +261,6 @@ def data_ready(path):
 
 def build_data(cfg):
     return Dataprocessor(cfg)
-    return processor.train_tfrecords, processor.val_tfrecords
     # augment = Augmentor(True)
     # X, y = [], []
     # for folder in cfg.TRAIN_DIR:
@@ -284,4 +283,3 @@ def build_data(cfg):
     # # X, y = data_ready(cfg.VAL_DIR)
     # val_batches = ValGenerator(X, y, mean=cfg.DATA.MEAN, std=cfg.DATA.STD, size=cfg.DATA.SIZE)
     
-    return train_batches, val_batches

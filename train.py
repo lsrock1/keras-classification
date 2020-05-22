@@ -1,7 +1,7 @@
 from classification.model import build_compiled_model
 from classification.datasets.dataset import build_data
 from classification.configs import cfg
-from classification.checkpoint.engine import build_checkpoint_callback
+from classification.checkpoint.engine import build_callbacks
 
 import argparse
 
@@ -28,10 +28,10 @@ def main():
         data.train_tfrecords,
         steps_per_epoch=data.train_length,
         validation_data=data.val_tfrecords,
-        # use_multiprocessing=True,
+        use_multiprocessing=True,
         workers=6,
         epochs=cfg.EPOCH,
-        callbacks=[build_checkpoint_callback(cfg)]
+        callbacks=build_callbacks(cfg)
     )
 
 
