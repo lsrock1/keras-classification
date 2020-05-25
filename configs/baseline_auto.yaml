@@ -1,0 +1,5 @@
+MODEL:
+  AUTOML: True
+TRAIN_DIR: ('data/train', 'data/train_0513')
+BATCH_SIZE: 48
+OUTPUT_DIR: 'baseline-auto'

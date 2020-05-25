@@ -53,6 +53,7 @@ class Dataprocessor:
             dirs = dirs.union(set(classes))
         
         dirs = sorted(list(dirs))
+        assert self.args.MODEL.NUM_CLASSES == len(dirs), f'only {len(dirs)} class exists!'
         assert len(dirs) > 1, f'only {len(dirs)} class exists!'
         print(f'{len(dirs)} classes exist')
         for name in dirs:
