@@ -3,6 +3,7 @@ from .kerasmodels import make_keras_model, keras_factory
 from .automl import make_automl_model
 from tensorflow.python.util import nest
 import tensorflow as tf
+from tensorflow.keras.models import load_model
 # from autokeras.utils import data_utils
 
 
@@ -27,11 +28,20 @@ class ModelInterface:
     
     def compile(self):
         if not self.is_automl:
-            self.model = self.model.compile(
+            self.model.compile(
                 optimizer = build_optimizer(self.args),
                 loss='sparse_categorical_crossentropy',
                 metrics = ['accuracy']
             )
+            # print(self.model)
+
+    def load_weights(self, path):
+        if not self.args.is_automl:
+            self.model.load_weights(path)
+        else:
+            self.model.export().load_weights(path)
+
+        return self.model
 
     def fit(self, train, steps_per_epoch, validation_data, use_multiprocessing, workers, epochs, callbacks):
         if self.is_automl:
@@ -40,11 +50,6 @@ class ModelInterface:
             self.__fit(train, steps_per_epoch, validation_data, use_multiprocessing, workers, epochs, callbacks)
 
     def __automl_fit(self, dataset, epochs, callbacks, validation_data, **kwargs):
-        def gen():
-            for d in dataset:
-                yield dataset
-
-        dataset = tf.data.Dataset.from_generator(gen)
         # self.model.inputs[0].shape = [self.args.DATA.SIZE[1], self.args.DATA.SIZE[0], 3]
 
         # self.model.outputs[0].shape = [self.args.MODEL.NUM_CLASSES]
@@ -64,7 +69,7 @@ class ModelInterface:
         # validation_data = self.__process_xy(x_val, validation=True)
         # dataset = dataset.batch(self.args.BATCH_SIZE, drop_remainder=True)
         # validation_data = validation_data.batch(self.args.BATCH_SIZE, drop_remainder=True)
-        print(type(dataset))
+        # print(type(dataset))
         self.model.fit(x=dataset, y=None,
                           epochs=epochs,
                           callbacks=callbacks,
@@ -80,13 +85,13 @@ class ModelInterface:
 
     def __fit(self, train, steps_per_epoch, validation_data, use_multiprocessing, workers, epochs, callbacks, **kwargs):
         self.model.fit(
-            data.train_tfrecords,
-            steps_per_epoch=data.train_length,
-            validation_data=data.val_tfrecords,
-            use_multiprocessing=True,
-            workers=6,
-            epochs=cfg.EPOCH,
-            callbacks=build_callbacks(cfg)
+            train,
+            steps_per_epoch=steps_per_epoch,
+            validation_data=validation_data,
+            use_multiprocessing=use_multiprocessing,
+            workers=workers,
+            epochs=epochs,
+            callbacks=callbacks
         )
 
     # For AutoKeras

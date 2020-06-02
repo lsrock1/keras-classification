@@ -7,6 +7,7 @@ import tensorflow as tf
 import cv2
 import os
 from tqdm import tqdm
+import itertools
 # from imblearn.keras import BalancedBatchGenerator, balanced_batch_generator
 # from imblearn.over_sampling import RandomOverSampler
 from tensorflow.keras.utils import Sequence, to_categorical
@@ -37,12 +38,30 @@ class Dataprocessor:
         return self.total_val // self.args.BATCH_SIZE
 
     def create_dataset(self, tfrecords, is_val=False):
-        augmentation = DataAugmenter(self.args, is_val) 
-        return tfrecords.cache()\
-                        .shuffle(self.args.DATA.SHUFFLE_SIZE)\
-                        .map(augmentation)\
-                        .batch(self.args.BATCH_SIZE)\
-                        .prefetch(buffer_size=AUTOTUNE)
+        augmentation = DataAugmenter(self.args, is_val)
+        if self.args.MODEL.AUTOML:
+            dirs = self.args.TRAIN_DIR if not is_val else self.args.VAL_DIR
+            train_gen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255, preprocessing_function=augmentation)
+            data_gens = [train_gen.flow_from_directory(
+                directory=d,
+                batch_size=self.args.BATCH_SIZE,
+                shuffle=True,
+                target_size=(self.args.DATA.SIZE[1], self.args.DATA.SIZE[0]),
+            ) for d in dirs]
+            data_gens = itertools.chain(*data_gens)
+
+            def callable_iterator(generator):
+                for img_batch, targets_batch in generator:
+                    yield img_batch, targets_batch
+
+            return tf.data.Dataset.from_generator(lambda: callable_iterator(data_gens), output_types=(tf.float32, tf.float32))
+
+        else:
+            return tfrecords.cache()\
+                            .shuffle(self.args.DATA.SHUFFLE_SIZE)\
+                            .map(augmentation)\
+                            .batch(self.args.BATCH_SIZE)\
+                            .prefetch(buffer_size=AUTOTUNE)
 
     def read_classes(self, paths):
         print(f'read classes from data path: {paths} ..')

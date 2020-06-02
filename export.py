@@ -26,7 +26,7 @@ def get_model():
     
     latest = tf.train.latest_checkpoint(cfg.OUTPUT_DIR)
     model = build_compiled_model(cfg)
-    model.load_weights(latest)
+    model = model.load_weights(latest)
 
     return model, cfg
     # train_data, val_data = build_data(cfg)

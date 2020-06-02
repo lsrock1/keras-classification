@@ -38,7 +38,7 @@ def make_keras_model(model_name, num_classes, size, weight_decay):
     x = GlobalAveragePooling2D()(x)
     x = Dropout(0.5)(x)
     x = Dense(1024, activation='relu')(x)
-    x = Dense(num_classes, activation='softmax')(x)
+    x = Dense(num_classes, activation='softmax', dtype='float32')(x)
     model = Model(inputs=model.input, outputs=x)
 
     for layer in model.layers:

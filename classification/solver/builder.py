@@ -2,6 +2,7 @@ import tensorflow as tf
 
 from .scheduler import build_scheduler
 
+
 __all__ = ['sgd', 'adam']
 
 
@@ -21,4 +22,6 @@ __pair = {
 def build_optimizer(cfg):
     assert cfg.SOLVER.NAME in __pair
     scheduler = build_scheduler(cfg)
-    return __pair[cfg.SOLVER.NAME](scheduler)
+    optimizer = __pair[cfg.SOLVER.NAME](scheduler)
+
+    return optimizer

@@ -7,13 +7,16 @@ class DataAugmenter:
         self.args = args
         self.is_val = is_val
 
-    def __call__(self, image, label):
+    def __call__(self, image, label=None):
         # 0 ~ 1, pad resize
         image = tf.image.convert_image_dtype(image, tf.float32)
         image = tf.image.resize_with_pad(image, self.args.DATA.SIZE[1], self.args.DATA.SIZE[0])
         
         if self.is_val:
-            return image, label
+            if label != None:
+                return image, label
+            else:
+                return image
 
         # random crop
         if self.args.DATA.RANDOM_CROP:
@@ -37,4 +40,7 @@ class DataAugmenter:
         if self.args.DATA.RANDOM_SATURATE:
             image = tf.image.random_saturation(image, self.args.DATA.RANDOM_SATURATE_RANGE[0], self.args.DATA.RANDOM_SATURATE_RANGE[1])
 
-        return image, label
+        if label != None:
+            return image, label
+        else:
+            return image
