@@ -43,7 +43,7 @@ class ModelInterface:
             # print(self.model)
 
     def load_weights(self, path):
-        if not self.args.is_automl:
+        if not self.is_automl:
             self.model.load_weights(path)
         else:
             self.model.export().load_weights(path)

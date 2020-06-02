@@ -1,10 +1,10 @@
 import tensorflow as tf
 from tensorflow.keras import backend as K
+from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
-from falldown.model import build_compiled_model
-from falldown.datasets.dataset import build_data
-from falldown.configs import cfg
-from falldown.checkpoint.engine import build_checkpoint_callback
+from classification.model import build_compiled_model
+from classification.datasets.dataset import build_data
+from classification.configs import cfg
 
 import argparse
 
@@ -42,6 +42,17 @@ def get_model():
     # )
 
 
+def for_tf2(model):
+    full_model = tf.function(lambda x: model(x))
+    full_model = full_model.get_concrete_function(
+        tf.TensorSpec(model.inputs[0].shape, model.inputs[0].dtype))
+
+    # Get frozen ConcreteFunction
+    frozen_func = convert_variables_to_constants_v2(full_model)
+    frozen_func.graph.as_graph_def()
+    return frozen_func.graph
+
+
 def freeze_session(session, keep_var_names=None, output_names=None, clear_devices=True):
     """
     Freezes the state of a session into a pruned computation graph.
@@ -77,9 +88,14 @@ def main():
     model, cfg = get_model()
     print(model.inputs)
     print(model.outputs)
-    frozen_graph = freeze_session(K.get_session(),
-                                output_names=[out.op.name for out in model.outputs])
-    tf.train.write_graph(frozen_graph, cfg.OUTPUT_DIR, "my_model.pb", as_text=False)
+    frozen_graph = for_tf2(model)
+    tf.io.write_graph(graph_or_graph_def=frozen_graph,
+                    logdir=cfg.OUTPUT_DIR,
+                    name="my_model.pb",
+                    as_text=False)
+    # frozen_graph = freeze_session(K.get_session(),
+    #                             output_names=[out.op.name for out in model.outputs])
+    # tf.train.write_graph(frozen_graph, cfg.OUTPUT_DIR, "my_model.pb", as_text=False)
 
 
 if __name__ == '__main__':
