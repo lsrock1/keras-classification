@@ -57,11 +57,16 @@ class Dataprocessor:
             return tf.data.Dataset.from_generator(lambda: callable_iterator(data_gens), output_types=(tf.float32, tf.float32))
 
         else:
-            return tfrecords.repeat()\
-                            .shuffle(self.args.DATA.SHUFFLE_SIZE)\
-                            .map(augmentation)\
-                            .batch(self.args.BATCH_SIZE)\
-                            .prefetch(buffer_size=AUTOTUNE)
+            if not is_val:
+                return tfrecords.repeat()\
+                                .shuffle(self.args.DATA.SHUFFLE_SIZE)\
+                                .map(augmentation)\
+                                .batch(self.args.BATCH_SIZE)\
+                                .prefetch(buffer_size=AUTOTUNE)
+            else:
+                return tfrecords.map(augmentation)\
+                                .batch(self.args.BATCH_SIZE)\
+                                .prefetch(buffer_size=AUTOTUNE)
 
     def read_classes(self, paths):
         print(f'read classes from data path: {paths} ..')
