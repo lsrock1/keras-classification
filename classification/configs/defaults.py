@@ -9,6 +9,7 @@ _C.OUTPUT_DIR = 'baseline'
 _C.EPOCH = 5
 _C.BATCH_SIZE = 64
 _C.MIXED_PRECISION = False
+_C.QUANTIZATION_TRAINING = False
 
 _C.MODEL = CN()
 _C.MODEL.NAME = 'resnet50'

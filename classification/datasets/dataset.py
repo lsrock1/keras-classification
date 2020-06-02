@@ -57,7 +57,7 @@ class Dataprocessor:
             return tf.data.Dataset.from_generator(lambda: callable_iterator(data_gens), output_types=(tf.float32, tf.float32))
 
         else:
-            return tfrecords.cache()\
+            return tfrecords.repeat()\
                             .shuffle(self.args.DATA.SHUFFLE_SIZE)\
                             .map(augmentation)\
                             .batch(self.args.BATCH_SIZE)\

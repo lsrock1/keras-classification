@@ -5,6 +5,7 @@
     pip install fvcore
     pip install tensorflow-gpu # > 2.1
     pip install autokeras
+    pip install tensorflow-model-optimization
   ```
 ## Configuration
 All possible options are in [classification/configs/defaults.py](classification/configs/defaults.py)
@@ -20,7 +21,23 @@ All possible options are in [classification/configs/defaults.py](classification/
 ## Train
 
 ```bash
+# baseline training
 python train.py --config-file configs/baseline.yaml
+
+# mixed precision training
+python train.py --config-file configs/mixed_precision.yaml
+
+# autokeras training
+# not supported currently because of generator issue
+# python train.py --config-file configs/baseline_auto.yaml
+```
+
+## Export
+
+### Find best model in the saved directory and export.
+
+```bash
+python export.py --config-file configs/baseline.yaml
 ```
 
 ## Dataset

@@ -4,6 +4,9 @@ from .automl import make_automl_model
 from tensorflow.python.util import nest
 import tensorflow as tf
 from tensorflow.keras.models import load_model
+import tensorflow_model_optimization as tfmot
+
+quantize_model = tfmot.quantization.keras.quantize_model
 # from autokeras.utils import data_utils
 
 
@@ -13,6 +16,10 @@ class ModelInterface:
         self.is_automl = args.MODEL.AUTOML
         self.model = self.build(args)
         self.compile()
+        if self.args.QUANTIZATION_TRAINING:
+            assert not self.is_automl, "autokeras doesn't support quantization aware training"
+            self.model = quantize_model(self.model)
+            self.compile()
 
     def build(self, args):
         return self.get_model(args)
