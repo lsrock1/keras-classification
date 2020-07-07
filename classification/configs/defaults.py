@@ -3,10 +3,11 @@ from fvcore.common.config import CfgNode as CN
 
 _C = CN()
 
+_C.TASK = 'classification'
 _C.TRAIN_DIR = ('data/train', )
 _C.VAL_DIR = ('data/val',)
 _C.OUTPUT_DIR = 'baseline'
-_C.EPOCH = 5
+_C.EPOCH = 60
 _C.BATCH_SIZE = 64
 _C.MIXED_PRECISION = False
 _C.QUANTIZATION_TRAINING = False
@@ -15,6 +16,9 @@ _C.TENSORBOARD = True
 _C.MODEL = CN()
 _C.MODEL.NAME = 'resnet50'
 _C.MODEL.NUM_CLASSES = 3
+_C.MODEL.CLASSES = (None,)
+
+_C.MODEL.TEMPERATURE_SCALING = 1
 
 _C.MODEL.AUTOML = False
 _C.MODEL.AUTOML_TRIALS = 1000

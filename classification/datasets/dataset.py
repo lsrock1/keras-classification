@@ -69,6 +69,9 @@ class Dataprocessor:
                                 .prefetch(buffer_size=AUTOTUNE)
 
     def read_classes(self, paths):
+        if len(self.args.MODEL.CLASSES) > 1 and self.args.MODEL.CLASSES[0] != None:
+            # print(self.args.MODEL.CLASSES)
+            return self.args.MODEL.CLASSES
         print(f'read classes from data path: {paths} ..')
         dirs = set()
         for path in paths:
@@ -106,6 +109,8 @@ class Dataprocessor:
                     image_string = open(f, 'rb').read()
                     label = os.path.basename(os.path.dirname(f))
                     tf_example = self.__make_feature_from(image_string, label)
+                    if tf_example == None:
+                        continue
                     writer.write(tf_example.SerializeToString())
             lengths.append(length)
             with open(record_file + '.length', 'w') as l:
@@ -114,7 +119,10 @@ class Dataprocessor:
         return sum(lengths)
 
     def __make_feature_from(self, image_string, label):
-        label = self.classes.index(label)
+        try:
+            label = self.classes.index(label)
+        except:
+            return None
         image_shape = tf.image.decode_jpeg(image_string).shape
         if isinstance(image_string, type(tf.constant(0))):
             image_string = image_string.numpy()

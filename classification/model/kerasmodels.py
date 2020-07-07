@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Input, Dropout
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Input, Dropout, Activation
 from tensorflow.keras.models import Model
 from tensorflow.keras.regularizers import l2
 
@@ -29,16 +29,18 @@ keras_factory = {
 }
 
 
-def make_keras_model(model_name, num_classes, size, weight_decay):
+def make_keras_model(task_name, model_name, num_classes, size, weight_decay):
     assert model_name in keras_factory
 
     input_tensor = Input(shape=size + (3,))
     model = keras_factory[model_name](weights='imagenet', include_top=False, input_tensor=input_tensor)
     x = model.output
     x = GlobalAveragePooling2D()(x)
-    x = Dropout(0.5)(x)
-    x = Dense(1024, activation='relu')(x)
-    x = Dense(num_classes, activation='softmax', dtype='float32')(x)
+    if task_name == 'classification':
+        x = Dropout(0.3)(x)
+        x = Dense(1024, activation='relu')(x)
+        x = Dense(num_classes, dtype='float32')(x)
+        x = Activation('softmax')(x)
     model = Model(inputs=model.input, outputs=x)
 
     for layer in model.layers:

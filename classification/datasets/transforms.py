@@ -10,6 +10,7 @@ class DataAugmenter:
     def __call__(self, image, label=None):
         # 0 ~ 1, pad resize
         image = tf.image.convert_image_dtype(image, tf.float32)
+        # image = tf.math.multiply(image, self.args)
         image = tf.image.resize_with_pad(image, self.args.DATA.SIZE[1], self.args.DATA.SIZE[0])
         
         if self.is_val:

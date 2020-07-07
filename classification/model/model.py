@@ -1,4 +1,5 @@
 from classification.solver.builder import build_optimizer
+from classification.loss import build_loss
 from .kerasmodels import make_keras_model, keras_factory
 from .automl import make_automl_model
 from tensorflow.python.util import nest
@@ -21,24 +22,36 @@ class ModelInterface:
             self.model = quantize_model(self.model)
             self.compile()
 
-    def build(self, args):
-        return self.get_model(args)
-
-    def get_model(self, cfg):
+    def build(self, cfg):
         if cfg.MODEL.NAME in keras_factory and not cfg.MODEL.AUTOML:
-            return make_keras_model(cfg.MODEL.NAME,
+            return make_keras_model(cfg.TASK, cfg.MODEL.NAME,
                                     cfg.MODEL.NUM_CLASSES,
                                     (cfg.DATA.SIZE[1], cfg.DATA.SIZE[0]),
                                     cfg.SOLVER.WEIGHT_DECAY)
         else:
             return make_automl_model(cfg)
-    
+
+    def export(self):
+        
+        if not self.is_automl:
+            model = self.model#.load_weights(path)
+        else:
+            model = self.model.export_model()#.load_weights(path)
+        input = model.input
+        input = tf.keras.layers.multiply(input, 1/255)
+        new_output = model.layers[-2].output / self.args.MODEL.TEMPERATURE_SCALING
+        new_output = tf.keras.layers.Activation('softmax')(new_output)
+        model = tf.keras.models.Model(inputs=input, outputs=new_output)
+        self.model = model
+        self.compile()
+        return self.model
+
     def compile(self):
         if not self.is_automl:
             self.model.compile(
-                optimizer = build_optimizer(self.args),
-                loss='sparse_categorical_crossentropy',
-                metrics = ['accuracy']
+                optimizer=build_optimizer(self.args),
+                loss=build_loss(self.args),
+                metrics=['accuracy']
             )
             # print(self.model)
 
@@ -46,7 +59,7 @@ class ModelInterface:
         if not self.is_automl:
             self.model.load_weights(path)
         else:
-            self.model.export().load_weights(path)
+            self.model.export_model().load_weights(path)
 
         return self.model
 
@@ -101,7 +114,6 @@ class ModelInterface:
             callbacks=callbacks
         )
 
-    # For AutoKeras
     def __check_data_format(self, x, validation_data):
         x_shapes, y_shapes = tf.compat.v1.data.get_output_shapes(x)
         x_shapes = nest.flatten(x_shapes)
@@ -157,6 +169,7 @@ class ModelInterface:
         if len(adapted) == 1:
             return adapted[0]
         return tf.data.Dataset.zip(tuple(adapted))
+
 
 def build_compiled_model(cfg):
     return ModelInterface(cfg)
