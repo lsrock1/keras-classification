@@ -1,6 +1,10 @@
 import tensorflow as tf
 from tensorflow.keras import backend as K
-from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
+from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2, convert_variables_to_constants_v2_as_graph
+from tensorflow.core.framework import attr_value_pb2
+from tensorflow.python.framework import tensor_util, dtypes
+from tensorflow.lite.python.util import run_graph_optimizations, get_grappler_config
+
 
 from classification.model import build_compiled_model
 from classification.datasets.dataset import build_data
@@ -46,11 +50,43 @@ def for_tf2(model):
     full_model = tf.function(lambda x: model(x))
     full_model = full_model.get_concrete_function(
         tf.TensorSpec(model.inputs[0].shape, model.inputs[0].dtype))
-
+    # for l in full_model.layers:
+    #     print(l)
+    # real_model.summary()
     # Get frozen ConcreteFunction
-    frozen_func = convert_variables_to_constants_v2(full_model)
-    frozen_func.graph.as_graph_def()
-    return frozen_func.graph
+    frozen_func, graph_def = convert_variables_to_constants_v2_as_graph(full_model)
+    # print(graph_def)
+    print('input: ', graph_def.node[0].op)
+    print('output: ', graph_def.node[-1].op)
+    for node in graph_def.node:
+        # print('#'*50)
+        # print('name: ' ,node.name)
+        # print(node.op)
+        # print([f for f in node.attr.keys()])
+        if node.op == 'FusedBatchNormV3':
+            del node.attr["exponential_avg_factor"]
+            # print([f for f in node.attr.keys()])
+            # node.attr["exponential_avg_factor"].CopyFrom(
+                # attr_value_pb2.AttrValue(tensor=tensor_util.make_tensor_proto([1], dtypes.float32)))
+    # print(frozen_func.graph._collections)
+    # for f in frozen_func.graph.node:
+    #     print(f)
+
+    # input_tensors = [
+    #     tensor for tensor in frozen_func.inputs
+    #     if tensor.dtype != tf.resource
+    # ]
+    
+    # output_tensors = frozen_func.outputs
+
+    # graph_def = run_graph_optimizations(
+    #     graph_def,
+    #     input_tensors,
+    #     output_tensors,
+    #     config=get_grappler_config(["constfold", "function"]),
+    #     graph=frozen_func.graph)
+    
+    return graph_def
 
 
 def freeze_session(session, keep_var_names=None, output_names=None, clear_devices=True):
