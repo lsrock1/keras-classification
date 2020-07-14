@@ -91,6 +91,30 @@ class CustomModel(tf.keras.Model):
         output = self.softmax(output)
         return output
 
+    def test_step(self, data):
+        data, label, weights = unpack_x_y_sample_weight(data)
+
+        pred = self(data, False)
+
+        if self.unk:
+            max_value = tf.reduce_max(pred, axis=1)
+            pred = tf.where(max_value >= 0.8, pred, 0)
+            # pred[under_threshold] = 0
+            new_tensor = tf.ones([tf.shape(pred)[0], 1], dtype=tf.float32)
+            new_tensor = tf.where(max_value < 0.8, new_tensor, 0)
+            # new_tensor[under_threshold] = 1
+            pred_value = tf.concat([new_tensor, pred], axis=1)
+            tf.print(pred_value)
+            loss = tf.math.reduce_mean(tf.keras.losses.sparse_categorical_crossentropy(label, pred_value))
+            self.compiled_metrics.update_state(label, pred_value, weights)
+            results = {m.name: m.result() for m in self.metrics}
+            results['loss'] = loss
+        else:
+            loss = tf.math.reduce_mean(tf.keras.losses.sparse_categorical_crossentropy(label, pred_value))
+            results = {'loss': loss}
+        
+        return results
+
     def train_step(self, data):
         data, label, weights = unpack_x_y_sample_weight(data)
             
@@ -98,10 +122,13 @@ class CustomModel(tf.keras.Model):
             pred = self(data, True)
 
             if self.unk:
+                # tf.print(label)
                 unk_index = tf.math.equal(label, tf.constant(self.unk_idx, dtype=tf.int64))
                 cls_index = tf.math.logical_not(unk_index)
                 cls_pred = tf.boolean_mask(pred, cls_index)
+                
                 cls_gt = tf.boolean_mask(label, cls_index)
+                cls_gt = tf.subtract(cls_gt, 1)
                 unk_pred = tf.boolean_mask(pred, unk_index)
                 cls_loss = tf.math.reduce_mean(tf.keras.losses.sparse_categorical_crossentropy(cls_gt, cls_pred))
                 # tf.print(tf.shape(cls_loss))
