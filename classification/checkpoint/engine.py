@@ -1,6 +1,7 @@
 import tensorflow as tf
 import os
 import datetime
+from .scheduler import build_scheduler
 
 
 def build_callbacks(cfg):
@@ -16,5 +17,6 @@ def build_callbacks(cfg):
         log_dir = os.path.join(cfg.OUTPUT_DIR, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         callbacks.append(tensorboard_callback)
-
+    callbacks.append(build_scheduler(cfg))
+    
     return callbacks

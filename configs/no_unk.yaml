@@ -1,0 +1,8 @@
+MODEL:
+  NAME: 'resnet50'
+  CLASSES: ('person', 'falldown')
+  NUM_CLASSES: 2
+  TEMPERATURE_SCALING: 2
+TRAIN_DIR: ('data/train', 'data/train_0513', 'data/0702')
+BATCH_SIZE: 48
+OUTPUT_DIR: 'no_unk'

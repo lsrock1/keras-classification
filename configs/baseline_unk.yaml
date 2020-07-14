@@ -1,0 +1,9 @@
+MODEL:
+  NAME: 'resnet50'
+  CLASSES: ('unknown', 'person', 'falldown')
+EPOCH: 6
+SOLVER:
+  LR: 0.0002
+TRAIN_DIR: ('data/train', 'data/train_0513', 'data/0702')
+BATCH_SIZE: 48
+OUTPUT_DIR: 'baseline_unk'

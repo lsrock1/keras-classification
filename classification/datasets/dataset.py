@@ -41,7 +41,7 @@ class Dataprocessor:
         augmentation = DataAugmenter(self.args, is_val)
         if self.args.MODEL.AUTOML:
             dirs = self.args.TRAIN_DIR if not is_val else self.args.VAL_DIR
-            train_gen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255, preprocessing_function=augmentation)
+            train_gen = tf.keras.preprocessing.image.ImageDataGenerator(preprocessing_function=augmentation)
             data_gens = [train_gen.flow_from_directory(
                 directory=d,
                 batch_size=self.args.BATCH_SIZE,
@@ -92,18 +92,19 @@ class Dataprocessor:
     def make_tfrecord(self, paths):
         lengths = []
         for path in paths:
-            record_file = os.path.join(path, 'data.tfrecords')
+            record_file = os.path.join(path, f'data_{len(self.classes)}.tfrecords')
             if os.path.exists(record_file):
-                with open(record_file + '.length', 'r') as l:
+                with open(record_file + f'_{len(self.classes)}.length', 'r') as l:
                     lengths.append(int(l.readline()))
                 continue
             
             files = [f for f in glob(os.path.join(path, '*/*')) if f.endswith('jpg') or f.endswith('.png')]
             # print(os.path.join(path, '*/*.{jpg,png}'))
             # print(files)
+            np.random.shuffle(files)
             print('making tfrecords..')
             # options = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
-            length = len(files)
+            length = 0
             with tf.io.TFRecordWriter(record_file) as writer:
                 for f in tqdm(files):
                     image_string = open(f, 'rb').read()
@@ -111,9 +112,10 @@ class Dataprocessor:
                     tf_example = self.__make_feature_from(image_string, label)
                     if tf_example == None:
                         continue
+                    length += 1
                     writer.write(tf_example.SerializeToString())
             lengths.append(length)
-            with open(record_file + '.length', 'w') as l:
+            with open(record_file + f'_{len(self.classes)}.length', 'w') as l:
                 l.write(str(length))
 
         return sum(lengths)
@@ -143,14 +145,14 @@ class Dataprocessor:
             'label': tf.io.FixedLenFeature([], tf.int64),
             'image': tf.io.FixedLenFeature([], tf.string),
         }
-        record_paths = [os.path.join(path, 'data.tfrecords') for path in paths]
+        record_paths = [os.path.join(path, f'data_{len(self.classes)}.tfrecords') for path in paths]
         dataset = tf.data.TFRecordDataset(record_paths)
 
         def _parse_image_function(example_proto):
             # Parse the input tf.Example proto using the dictionary above.
             example = tf.io.parse_single_example(example_proto, image_feature_description)
             # image = tf.io.decode_raw(example['image'], tf.uint8)
-            image = tf.image.decode_image(example['image'], channels=3)
+            image = tf.image.decode_jpeg(example['image'], channels=3, dct_method='INTEGER_ACCURATE')
             image = tf.reshape(image, [example['height'], example['width'], 3])
             return image, example['label']
 

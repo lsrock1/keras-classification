@@ -1,6 +1,6 @@
 from classification.solver.builder import build_optimizer
 from classification.loss import build_loss
-from .kerasmodels import make_keras_model, keras_factory
+from .kerasmodels import make_keras_model, keras_factory, CustomModel
 from .automl import make_automl_model
 from tensorflow.python.util import nest
 import tensorflow as tf
@@ -24,23 +24,34 @@ class ModelInterface:
 
     def build(self, cfg):
         if cfg.MODEL.NAME in keras_factory and not cfg.MODEL.AUTOML:
-            return make_keras_model(cfg.TASK, cfg.MODEL.NAME,
-                                    cfg.MODEL.NUM_CLASSES,
-                                    (cfg.DATA.SIZE[1], cfg.DATA.SIZE[0]),
-                                    cfg.SOLVER.WEIGHT_DECAY)
+            return CustomModel(cfg)
+            # return make_keras_model(cfg.TASK, cfg.MODEL.NAME,
+                                    # cfg.MODEL.NUM_CLASSES,
+                                    # (cfg.DATA.SIZE[1], cfg.DATA.SIZE[0]),
+                                    # cfg.SOLVER.WEIGHT_DECAY)
         else:
             return make_automl_model(cfg)
 
     def export(self):
         
         if not self.is_automl:
-            model = self.model#.load_weights(path)
+            model = self.model.export()#.load_weights(path)
         else:
             model = self.model.export_model()#.load_weights(path)
-        input = model.input
-        input = tf.keras.layers.multiply(input, 1/255)
-        new_output = model.layers[-2].output / self.args.MODEL.TEMPERATURE_SCALING
+
+        # pop input layer
+        # model.layers.pop(0)
+        # # pop last layer
+        # model.layers.pop()
+        # input = tf.keras.Input(shape=(cfg.DATA.SIZE[1], cfg.DATA.SIZE[0], 3))
+        # normalized_input = normalized_input - [[self.args.DATA.MEAN]]
+        # normalized_input = normalized_input / [[self.args.DATA.STD]]
+
+        # new_output = model(normalized_input)
+        new_output = model.output
+        new_output = new_output / self.args.MODEL.TEMPERATURE_SCALING
         new_output = tf.keras.layers.Activation('softmax')(new_output)
+
         model = tf.keras.models.Model(inputs=input, outputs=new_output)
         self.model = model
         self.compile()
@@ -56,6 +67,7 @@ class ModelInterface:
             # print(self.model)
 
     def load_weights(self, path):
+        print(f'load from {path}')
         if not self.is_automl:
             self.model.load_weights(path)
         else:
@@ -109,6 +121,7 @@ class ModelInterface:
             steps_per_epoch=steps_per_epoch,
             validation_data=validation_data,
             use_multiprocessing=use_multiprocessing,
+            shuffle=True,
             workers=workers,
             epochs=epochs,
             callbacks=callbacks
