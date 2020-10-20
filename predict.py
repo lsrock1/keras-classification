@@ -47,6 +47,7 @@ def put_text(img, texts):
 
 
 def predict_and_show(model, ):
+    val_dir = ['/home/ocrusr/classification_keras/from_int/']#cfg.VAL_DIR
     val_dir = cfg.VAL_DIR
     val_dir = Path(val_dir[0])
     class_names = [d.name for d in val_dir.glob('*')]
@@ -81,21 +82,23 @@ def predict_and_show(model, ):
         results = results[0]
         pred = np.argmax(results)
         pred_value = np.max(results)
-        if pred_value < 60:
+        if pred_value < 0.7:
             pred = 2
-        if pred == gt_label:
-            corr += 1
-        # if gt_label == 2:
-        #     print(pred_value)
-        else:
-            print(gt_label, ' but ', pred, ' value: ', pred_value)
+        print(pred)
+        # if pred == gt_label:
+        #     corr += 1
+        # # if gt_label == 2:
+        # #     print(pred_value)
+        # else:
+        #     print(gt_label, ' but ', pred, ' value: ', pred_value)
         # print(results)
-        # texts = [cn + ': ' + str(r) for cn, r in zip(classes, results.tolist())]
-        # img = put_text(image.numpy().astype(np.uint8), texts)
-        # cv2.imshow('t', img)
-        # k = cv2.waitKey(0)
-        # if k == 27: # esc key
-        #     cv2.destroyAllWindow()
+        texts = [cn + ': ' + str(r) for cn, r in zip(['person', 'falldown'], results.tolist())]
+        img = put_text(image.numpy().astype(np.uint8), texts)
+        cv2.imshow('t', img)
+        k = cv2.waitKey(0)
+        if k == 27: # esc key
+            cv2.destroyAllWindows()
+            break
         print(corr/total)
     print(corr/total)
 

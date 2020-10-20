@@ -12,12 +12,12 @@ quantize_model = tfmot.quantization.keras.quantize_model
 
 
 class ModelInterface:
-    def __init__(self, args):
+    def __init__(self, args, for_export):
         self.args = args
         self.is_automl = args.MODEL.AUTOML
         self.model = self.build(args)
         self.compile()
-        if self.args.QUANTIZATION_TRAINING:
+        if self.args.QUANTIZATION_TRAINING and not for_export:
             assert not self.is_automl, "autokeras doesn't support quantization aware training"
             self.model = quantize_model(self.model)
             self.compile()
@@ -35,7 +35,7 @@ class ModelInterface:
     def export(self):
         
         if not self.is_automl:
-            model = self.model.export()#.load_weights(path)
+            model = self.model#.export()#.load_weights(path)
         else:
             model = self.model.export_model()#.load_weights(path)
 
@@ -52,10 +52,45 @@ class ModelInterface:
         new_output = new_output / self.args.MODEL.TEMPERATURE_SCALING
         new_output = tf.keras.layers.Activation('softmax')(new_output)
 
-        model = tf.keras.models.Model(inputs=input, outputs=new_output)
+        model = tf.keras.models.Model(inputs=model.input, outputs=new_output)
         self.model = model
         self.compile()
         return self.model
+
+    def save(self, path):
+        if not self.is_automl:
+            model = self.model.export()#.load_weights(path)
+        else:
+            model = self.model.export_model()#.load_weights(path)
+
+        # pop input layer
+        # model._layers.pop(0)
+        model.layers.pop(0)
+        # pop last layer
+        # model.summary()
+        if self.args.DATA.RANDOM_CROP:
+            height = self.args.DATA.RANDOM_CROP_SIZE[1]
+            width = self.args.DATA.RANDOM_CROP_SIZE[0]
+        else:
+            height = self.args.DATA.SIZE[1]
+            width = self.args.DATA.SIZE[0]
+        # print(f'shape: h: {height}, w: {width}')
+        # model.summary()
+        input = tf.keras.Input(shape=(height, width, 3))
+        normalized_input = input - [[self.args.DATA.MEAN]]
+        normalized_input = normalized_input / [[self.args.DATA.STD]]
+        
+        new_output = model(normalized_input)
+        # new_output = model.output
+        # new_output = new_output / self.args.MODEL.TEMPERATURE_SCALING
+        # new_output = tf.keras.layers.Activation('softmax')(new_output)
+        # model.summary()
+        model = tf.keras.models.Model(inputs=input, outputs=new_output)
+        self.model = model
+        self.compile()
+        self.model.summary()
+        # self.model.save(path)
+        tf.saved_model.save(self.model, path)
 
     def compile(self):
         if not self.is_automl:
@@ -184,5 +219,5 @@ class ModelInterface:
         return tf.data.Dataset.zip(tuple(adapted))
 
 
-def build_compiled_model(cfg):
-    return ModelInterface(cfg)
+def build_compiled_model(cfg, for_export=False):
+    return ModelInterface(cfg, for_export)

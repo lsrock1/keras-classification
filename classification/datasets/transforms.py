@@ -13,17 +13,22 @@ class DataAugmenter:
         image = tf.image.convert_image_dtype(image, tf.float32)
         image = image - [[self.args.DATA.MEAN]]
         image = image / [[self.args.DATA.STD]]
-        image = tf.image.resize_with_pad(image, self.args.DATA.SIZE[1], self.args.DATA.SIZE[0])
+        
         
         if self.is_val:
+            if self.args.DATA.RANDOM_CROP:
+                image = tf.image.resize_with_pad(image, self.args.DATA.RANDOM_CROP_SIZE[1], self.args.DATA.RANDOM_CROP_SIZE[0])
+            else:
+                image = tf.image.resize_with_pad(image, self.args.DATA.SIZE[1], self.args.DATA.SIZE[0])
             if label != None:
                 return image, label
             else:
                 return image
 
+        image = tf.image.resize_with_pad(image, self.args.DATA.SIZE[1], self.args.DATA.SIZE[0])
         # random crop
         if self.args.DATA.RANDOM_CROP:
-            image = tf.image.random_crop(image, self.args.DATA.RANDOM_CROP_SIZE[1], self.args.DATA.RANDOM_CROP_SIZE[0])
+            image = tf.image.random_crop(image, [self.args.DATA.RANDOM_CROP_SIZE[1], self.args.DATA.RANDOM_CROP_SIZE[0], 3])
 
         if self.args.DATA.RANDOM_BRIGHTNESS:
             image = tf.image.random_brightness(image, self.args.DATA.RANDOM_BRIGHTNESS_DELTA)

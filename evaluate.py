@@ -1,7 +1,7 @@
 from classification.model import build_compiled_model
 from classification.datasets.dataset import build_data
 from classification.configs import cfg
-from classification.checkpoint.engine import build_callbacks
+from classification.callbacks.engine import build_callbacks
 from tensorflow.keras.mixed_precision import experimental as mixed_precision
 
 import tensorflow as tf

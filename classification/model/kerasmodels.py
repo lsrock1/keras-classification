@@ -47,7 +47,10 @@ class CustomModel(tf.keras.Model):
         model_name = cfg.MODEL.NAME
         task_name = cfg.TASK
         num_classes = cfg.MODEL.NUM_CLASSES
-        size = [cfg.DATA.SIZE[1], cfg.DATA.SIZE[0]]
+        if cfg.DATA.RANDOM_CROP:
+            size = [cfg.DATA.RANDOM_CROP_SIZE[1], cfg.DATA.RANDOM_CROP_SIZE[0]]
+        else:
+            size = [cfg.DATA.SIZE[1], cfg.DATA.SIZE[0]]
         weight_decay = cfg.SOLVER.WEIGHT_DECAY
         classes = cfg.MODEL.CLASSES
         assert model_name in keras_factory
@@ -69,6 +72,7 @@ class CustomModel(tf.keras.Model):
     def export(self):
         output = self.model.output
         output = self.fc(output)
+        output = output / self.cfg.MODEL.TEMPERATURE_SCALING
         output = self.softmax(output)
         return Model(inputs=self.model.input, outputs=output)
 
@@ -98,20 +102,24 @@ class CustomModel(tf.keras.Model):
 
         if self.unk:
             max_value = tf.reduce_max(pred, axis=1)
-            pred = tf.where(max_value >= 0.8, pred, 0)
+            condition = max_value >= 0.8
+            condition = tf.expand_dims(condition, axis=-1)
+            pred = tf.where(condition, pred, 0)
             # pred[under_threshold] = 0
             new_tensor = tf.ones([tf.shape(pred)[0], 1], dtype=tf.float32)
-            new_tensor = tf.where(max_value < 0.8, new_tensor, 0)
+            new_tensor = tf.where(tf.logical_not(condition), new_tensor, 0)
             # new_tensor[under_threshold] = 1
             pred_value = tf.concat([new_tensor, pred], axis=1)
-            tf.print(pred_value)
+            
             loss = tf.math.reduce_mean(tf.keras.losses.sparse_categorical_crossentropy(label, pred_value))
             self.compiled_metrics.update_state(label, pred_value, weights)
             results = {m.name: m.result() for m in self.metrics}
             results['loss'] = loss
         else:
-            loss = tf.math.reduce_mean(tf.keras.losses.sparse_categorical_crossentropy(label, pred_value))
-            results = {'loss': loss}
+            loss = tf.math.reduce_mean(tf.keras.losses.sparse_categorical_crossentropy(label, pred))
+            self.compiled_metrics.update_state(label, pred, weights)
+            results = {m.name: m.result() for m in self.metrics}
+            results['loss'] = loss
         
         return results
 
@@ -146,7 +154,7 @@ class CustomModel(tf.keras.Model):
                     "unk_loss": unk_loss,
                 }
             else:
-                total_loss = keras.losses.sparse_categorical_crossentropy(data, label)
+                total_loss = tf.math.reduce_mean(tf.keras.losses.sparse_categorical_crossentropy(label, pred))
                 grads = tape.gradient(total_loss, self.trainable_weights)
                 self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
                 return {

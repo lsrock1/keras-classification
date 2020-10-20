@@ -5,12 +5,12 @@ from tensorflow.core.framework import attr_value_pb2
 from tensorflow.python.framework import tensor_util, dtypes
 from tensorflow.lite.python.util import run_graph_optimizations, get_grappler_config
 
-
 from classification.model import build_compiled_model
 from classification.datasets.dataset import build_data
 from classification.configs import cfg
 
 import argparse
+import os
 
 
 def get_model():
@@ -29,8 +29,8 @@ def get_model():
     print(cfg)
     
     latest = tf.train.latest_checkpoint(cfg.OUTPUT_DIR)
-    model = build_compiled_model(cfg)
-    model = model.load_weights(latest)
+    model = build_compiled_model(cfg, for_export=True)
+    model.load_weights(latest)
 
     return model, cfg
     # train_data, val_data = build_data(cfg)
@@ -122,13 +122,26 @@ def main():
 
     # Create, compile and train model...
     model, cfg = get_model()
-    print(model.inputs)
-    print(model.outputs)
-    frozen_graph = for_tf2(model)
-    tf.io.write_graph(graph_or_graph_def=frozen_graph,
-                    logdir=cfg.OUTPUT_DIR,
-                    name="my_model.pb",
-                    as_text=False)
+    if not os.path.exists(os.path.join(cfg.OUTPUT_DIR, 'export')):
+        os.mkdir(os.path.join(cfg.OUTPUT_DIR, 'export'))
+    model.save(os.path.join(cfg.OUTPUT_DIR, 'export'))
+    print('model saved')
+    # loaded = tf.keras.models.load_model(os.path.join(cfg.OUTPUT_DIR, 'export'))
+    # loaded.summary()
+    loaded = tf.saved_model.load(os.path.join(cfg.OUTPUT_DIR, 'export'))
+    # print(loaded.layers)
+    print(list(loaded.signatures.keys()))
+
+    infer = loaded.signatures["serving_default"]
+    print(infer.structured_outputs)
+
+    # print(model.inputs)
+    # print(model.outputs)
+    # frozen_graph = for_tf2(model)
+    # tf.io.write_graph(graph_or_graph_def=frozen_graph,
+    #                 logdir=cfg.OUTPUT_DIR,
+    #                 name="my_model.pb",
+    #                 as_text=False)
     # frozen_graph = freeze_session(K.get_session(),
     #                             output_names=[out.op.name for out in model.outputs])
     # tf.train.write_graph(frozen_graph, cfg.OUTPUT_DIR, "my_model.pb", as_text=False)

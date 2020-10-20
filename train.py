@@ -1,8 +1,9 @@
 from classification.model import build_compiled_model
 from classification.datasets.dataset import build_data
 from classification.configs import cfg
-from classification.checkpoint.engine import build_callbacks
+from classification.callbacks.engine import build_callbacks
 from tensorflow.keras.mixed_precision import experimental as mixed_precision
+import tensorflow as tf
 
 import argparse
 
@@ -27,7 +28,13 @@ def main():
         policy = mixed_precision.Policy('mixed_float16')
         mixed_precision.set_policy(policy)
     
-    model = build_compiled_model(cfg)
+    if cfg.MULTI_GPU:
+        strategy = tf.distribute.MirroredStrategy()
+
+        with strategy.scope():
+            model = build_compiled_model(cfg)
+    else:
+        model = build_compiled_model(cfg)
     data = build_data(cfg)
     # print(type(data.train_tfrecords))
     model.fit(
