@@ -5,7 +5,7 @@ from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Input, Dropou
 from tensorflow.keras.models import Model
 from tensorflow.keras.regularizers import l2
 
-
+from tensorflow.keras.layers.experimental import preprocessing
 from tensorflow.keras.applications.resnet_v2 import ResNet50V2, ResNet101V2, ResNet152V2
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 from tensorflow.keras.applications.inception_resnet_v2 import InceptionResNetV2
@@ -72,7 +72,10 @@ class CustomModel(tf.keras.Model):
     def export(self):
         output = self.model.output
         output = self.fc(output)
-        output = output / self.cfg.MODEL.TEMPERATURE_SCALING
+
+        if self.cfg.MODEL.TEMPERATURE_SCALING != 1:
+            output = preprocessing.Rescaling(1./self.cfg.MODEL.TEMPERATURE_SCALING)(output)
+        # output = output / self.cfg.MODEL.TEMPERATURE_SCALING
         output = self.softmax(output)
         return Model(inputs=self.model.input, outputs=output)
 
