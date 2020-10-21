@@ -6,6 +6,7 @@ from tensorflow.python.util import nest
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 import tensorflow_model_optimization as tfmot
+from tensorflow.keras.layers.experimental import preprocessing
 
 quantize_model = tfmot.quantization.keras.quantize_model
 # from autokeras.utils import data_utils
@@ -77,7 +78,8 @@ class ModelInterface:
         # print(f'shape: h: {height}, w: {width}')
         # model.summary()
         input = tf.keras.Input(shape=(height, width, 3))
-        normalized_input = input - [[self.args.DATA.MEAN]]
+        x = preprocessing.Rescaling(1./255)(input)
+        normalized_input = x - [[self.args.DATA.MEAN]]
         normalized_input = normalized_input / [[self.args.DATA.STD]]
         
         new_output = model(normalized_input)
